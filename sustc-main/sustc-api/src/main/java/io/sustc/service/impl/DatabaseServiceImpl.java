@@ -51,67 +51,71 @@ public class DatabaseServiceImpl implements DatabaseService {
             List<VideoRecord> videoRecords
     ) throws SQLException {
         // TODO: implement your import logic
-        Connection connection = dataSource.getConnection();
-        for (DanmuRecord danmu : danmuRecords) {
-            StringBuilder sb = new StringBuilder("""
-                    insert into danmu (bv, content, time, post_time, post_mid, likeby_mid) values
-                    """);
-            sb.append("('").append(danmu.getBv()).append("', '")
-                    .append(danmu.getContent()).append("', $$")
-                    .append(danmu.getTime()).append("$$, $$")
-                    .append(danmu.getPostTime()).append("$$, $$")
-                    .append(danmu.getMid()).append("$$, $$")
-                    .append(Arrays.toString(danmu.getLikedBy())).append("$$), ");
-            PreparedStatement statement = connection.prepareStatement(sb.substring(0, sb.length() - 1));
-            statement.execute();
+        try (Connection connection = dataSource.getConnection()) {
+            for (DanmuRecord danmu : danmuRecords) {
+                String sql = "INSERT INTO danmu (bv, content, time, post_time, post_mid, likeby_mid) VALUES (?, ?, ?, ?, ?, ?)";
+                try (PreparedStatement statement = connection.prepareStatement(sql)) {
+                    statement.setString(1, danmu.getBv());
+                    statement.setString(2, danmu.getContent());
+                    statement.setString(3, String.valueOf(danmu.getTime()));
+                    statement.setString(4, String.valueOf(danmu.getPostTime()));
+                    statement.setString(5, String.valueOf(danmu.getMid()));
+                    // Assuming likedBy is a String array, modify accordingly if it's a different type
+                    statement.setString(6, Arrays.toString(danmu.getLikedBy()));
+                    statement.execute();
+                }
+            }
+
+            for (UserRecord user : userRecords) {
+                String sql = "insert into users (mid, birthday, name, coin, sex, identity, level, qq, wechat, sign, password, following) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                try (PreparedStatement statement = connection.prepareStatement(sql)) {
+                    statement.setString(1, String.valueOf(user.getMid()));
+                    statement.setString(2, user.getBirthday());
+                    statement.setString(3, user.getName());
+                    statement.setInt(4, user.getCoin());
+                    statement.setString(5, user.getSex());
+                    // Assuming likedBy is a String array, modify accordingly if it's a different type
+                    statement.setString(6, String.valueOf(user.getIdentity()));
+                    statement.setInt(7, user.getLevel());
+                    statement.setString(8, user.getQq());
+                    statement.setString(9, user.getWechat());
+                    statement.setString(10, user.getSign());
+                    statement.setString(11, user.getPassword());
+                    statement.setString(12, Arrays.toString(user.getFollowing()));
+                    statement.execute();
+                }
+            }
+
+            for (VideoRecord video : videoRecords) {
+                String sql = " insert into videos (bv, title, duration, description, owner_mid, like_mid, coin_mid, favorite_mid, commit_time, reviewer_mid, review_time, public_time, watch_mid, watch_time, owner_name) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ";
+                try (PreparedStatement statement = connection.prepareStatement(sql)) {
+                    statement.setString(1, video.getBv());
+                    statement.setString(2, video.getTitle());
+                    statement.setFloat(3, video.getDuration());
+                    statement.setString(4, video.getDescription());
+                    statement.setString(5, String.valueOf(video.getOwnerMid()));
+                    // Assuming likedBy is a String array, modify accordingly if it's a different type
+                    statement.setString(6, Arrays.toString(video.getLike()));
+                    statement.setString(7, Arrays.toString(video.getCoin()));
+                    statement.setString(8, Arrays.toString(video.getFavorite()));
+                    statement.setString(9, String.valueOf(video.getCommitTime()));
+                    statement.setString(10, String.valueOf(video.getReviewer()));
+                    statement.setString(11, String.valueOf(video.getReviewTime()));
+                    statement.setString(12, String.valueOf(video.getPublicTime()));
+                    statement.setString(13, Arrays.toString(video.getViewerMids()));
+                    statement.setString(14, Arrays.toString(video.getViewTime()));
+                    statement.setString(15, String.valueOf(video.getOwnerName()));
+                    statement.execute();
+                } catch (SQLException e) {
+                    log.error("import failed", e);
+                    e.printStackTrace();
+                }
+
+                System.out.println(danmuRecords.size());
+                System.out.println(userRecords.size());
+                System.out.println(videoRecords.size());
+            }
         }
-
-        for (UserRecord user : userRecords) {
-            StringBuilder sb = new StringBuilder("""
-                    insert into users (mid, birthday, name, coin, sex, identity, level, qq, wechat, sign, password, following) values
-                    """);
-            sb.append(user.getMid()).append("', '")
-                    .append(user.getBirthday()).append("', $$")
-                    .append(user.getName()).append("$$, $$")
-                    .append(user.getCoin()).append("$$, $$")
-                    .append(user.getSex()).append("$$, $$")
-                    .append(user.getIdentity()).append("$$, $$")
-                    .append(user.getLevel()).append("$$, $$")
-                    .append(user.getQq()).append("$$, $$")
-                    .append(user.getWechat()).append("$$, $$")
-                    .append(user.getSign()).append("$$, $$")
-                    .append(user.getPassword()).append("$$, $$")
-                    .append(Arrays.toString(user.getFollowing())).append("$$),");
-            PreparedStatement statement = connection.prepareStatement(sb.substring(0, sb.length() - 1));
-            statement.execute();
-        }
-
-        for (VideoRecord video : videoRecords) {
-            StringBuilder sb = new StringBuilder("""
-                    insert into videos (bv, title, duration, description, owner_mid, like_mid, coin_mid, favorite_mid, commit_mid, reviewer_mid, review_time, public_time, watch_mid, watch_time) values\s
-                    """);
-            sb.append(video.getBv()).append("', '")
-                    .append(video.getTitle()).append("$$, $$")
-                    .append(video.getDuration()).append("$$, $$")
-                    .append(video.getDescription()).append("$$, $$")
-                    .append(video.getOwnerMid()).append("$$, $$")
-                    .append(Arrays.toString(video.getLike())).append("$$, $$")
-                    .append(Arrays.toString(video.getCoin())).append("$$, $$")
-                    .append(Arrays.toString(video.getFavorite())).append("$$, $$")
-                    .append(video.getOwnerMid()).append("$$, $$")
-                    .append(video.getReviewer()).append("$$, $$")
-                    .append(video.getReviewTime()).append("$$, $$")
-                    .append(video.getPublicTime()).append("$$, $$")
-                    .append(Arrays.toString(video.getViewerMids())).append("$$, $$")
-                    .append(Arrays.toString(video.getViewTime())).append("$$),");
-            PreparedStatement statement = connection.prepareStatement(sb.substring(0, sb.length() - 1));
-            statement.execute();
-        }
-
-
-        System.out.println(danmuRecords.size());
-        System.out.println(userRecords.size());
-        System.out.println(videoRecords.size());
     }
 
 
